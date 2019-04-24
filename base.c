@@ -50,23 +50,6 @@ xdata unsigned char send_c[65]={0X22,0X0A,0X09,0X09,0X09,0X09,0X7D,0X5D,
 								0X22};//1
 xdata unsigned char send_d[15]={0X22,0X0A,0X09,0X09,0X09,0X09,0X7D,0X5D,
 								0X0A,0X09,0X09,0X7D,0X5D,0X0A,0X7D};
-
-void UartInit(void)		//9600bps@11.0592MHz
-{
-	SCON = 0x50;		//8位数据,可变波特率
-	AUXR |= 0x40;		//定时器1时钟为Fosc,即1T
-	AUXR &= 0xFE;		//串口1选择定时器1为波特率发生器
-	TMOD &= 0x0F;		//设定定时器1为16位自动重装方式
-	TL1 = 0xE0;		//设定定时初值
-	TH1 = 0xFE;		//设定定时初值
-	ET1 = 0;		//禁止定时器1中断
-	TR1 = 1;		//启动定时器1
-	SM0=0;
-	SM1=1;
-	REN=1;
-	EA=1;
-	ES=1;
-}
 void decode(unsigned char cde)
 {
 	switch(cde)
@@ -82,6 +65,39 @@ void decode(unsigned char cde)
 		default:break;
 	}	
 }
+void initled(unsigned char l)
+{
+	 switch(l)
+	 {
+	 	case 0:decode(0XA4);P0=0XFF;decode(0XA0);break;
+		case 1:decode(0XA4);P0=0XFE;decode(0XA0);break;
+		case 2:decode(0XA4);P0=0XFC;decode(0XA0);break;
+		case 3:decode(0XA4);P0=0XF8;decode(0XA0);break;
+		case 4:decode(0XA4);P0=0XF0;decode(0XA0);break;
+		case 5:decode(0XA4);P0=0XE0;decode(0XA0);break;
+		case 6:decode(0XA4);P0=0XC0;decode(0XA0);break;
+		case 7:decode(0XA4);P0=0X80;decode(0XA0);break;
+		case 8:decode(0XA4);P0=0X00;decode(0XA0);break;
+	}
+}
+void UartInit(void)		//9600bps@11.0592MHz
+{
+	SCON = 0x50;		//8位数据,可变波特率
+	AUXR |= 0x40;		//定时器1时钟为Fosc,即1T
+	AUXR &= 0xFE;		//串口1选择定时器1为波特率发生器
+	TMOD &= 0x0F;		//设定定时器1为16位自动重装方式
+	TL1 = 0xE0;		//设定定时初值
+	TH1 = 0xFE;		//设定定时初值
+	ET1 = 0;		//禁止定时器1中断
+	TR1 = 1;		//启动定时器1
+	SM0=0;
+	SM1=1;
+	REN=1;
+	EA=1;
+	ES=1;
+	initled(7);
+}
+
 void delayus(unsigned int i)  //1us
 {
 	while(i--);
@@ -289,22 +305,25 @@ void esp_init()
 	   	ret = UART1_Send_AT_Command("AT\r\n","OK",2500);
 	}
 	ret=0;
+	initled(6);
 	while(!ret)
 	{
 	   	ret = UART1_Send_AT_Command("AT+CWMODE=1\r\n","OK",2500);
 	}
 	ret=0;
-	
+	initled(5);
 	while(!ret)
 	{
-	   	ret = UART1_Send_AT_Command("AT+CWJAP=\"DQCK\",\"dqckdqck\"\r\n","GOT IP",50000);
+	   	ret = UART1_Send_AT_Command("AT+CWJAP=\"MERCURY_C52D\",\"*963.,lp\"\r\n","GOT IP",50000);
 	}
 	ret=0;
+	initled(4);
 	while(!ret)
 	{
 	   	ret = UART1_Send_AT_Command("AT+CIPMUX=0\r\n","OK",2500);
 	}
 	ret=0;
+	initled(3);
 	CLR_Buf();
 	while(!ret)
 	{
@@ -312,6 +331,7 @@ void esp_init()
 		//ret = UART1_Send_AT_Command("AT+CIPSTART=\"TCP\",\"192.168.1.100\",876","OK",3500);
 	}
 	ret=0;
+	initled(2);
 	while(!ret)
 	{
 	   	ret = UART1_Send_AT_Command("AT+CIPMODE=1\r\n","OK",2500);
@@ -323,6 +343,7 @@ void esp_init()
 	   	ret = UART1_Send_AT_Command("AT+CIPSEND\r\n",">",5500);
 	}
 	ret=0;
+	initled(1);
 	delayms(2500);	
 }
 void serial_pro()
@@ -414,9 +435,8 @@ void pdetect()
 //			while(!P33);
 //		}
 //}
-void main()
+void boardinit()
 {
-
 	decode(0XA5);
 	P0=0X00;
 	decode(0XA0);
@@ -425,8 +445,11 @@ void main()
 	P0=0XFF;
 	decode(0XA0);
 	delayus(5);
-	UartInit();
-	delayus(1500);
+	initled(8);
+}
+void onenetinit()
+{
+    delayus(1500);
 	esp_init();
 	delayms(2500);
 	set_online();
@@ -435,6 +458,14 @@ void main()
 	delayms(2500);
 	set_online();
 	inited=1;
+	initled(0);
+}
+
+void main()
+{
+	boardinit();
+	UartInit();
+	onenetinit();
 	Timer0_init();
 	while(1)
 	{
